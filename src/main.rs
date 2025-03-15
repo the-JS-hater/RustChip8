@@ -41,25 +41,27 @@ impl Chip8 {
             .expect("Program tried to pop an empty stack");
     }
 
-    fn draw_display(&mut self, rl: &mut  RaylibHandle, thread: &RaylibThread) {   
+    fn draw_display(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         let mut d = rl.begin_drawing(thread);
         d.clear_background(Color::BLACK);
-        for y in 0..SCREEN_HEIGHT {
-            for x in 0..SCREEN_WIDTH {
-                if self.display[y as usize][x as usize] {
-                    d.draw_rectangle(
-                        x * SQUARE_SIZE,
-                        y * SQUARE_SIZE,
-                        SQUARE_SIZE,
-                        SQUARE_SIZE,
-                        Color::GREEN,
-                    );
-                }
+        for i in 0..(SCREEN_HEIGHT * SCREEN_WIDTH) {
+            let x = i % SCREEN_WIDTH;
+            let y = i / SCREEN_WIDTH;
+
+            if !self.display[y as usize][x as usize] {
+                continue;
             }
+
+            d.draw_rectangle(
+                x * SQUARE_SIZE,
+                y * SQUARE_SIZE,
+                SQUARE_SIZE,
+                SQUARE_SIZE,
+                Color::GREEN,
+            );
         }
     }
 }
-
 
 fn main() {
     let mut chip8 = Chip8::new();

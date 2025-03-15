@@ -39,6 +39,16 @@ impl Chip8 {
         return (byte1 as u16) << 8 & (byte2 as u16);
     }
 
+    fn execute(&mut self, instruction: u16) {
+        let instruction = split_nibbles(instruction);
+
+        todo!();
+        
+        match instruction {
+            _ => println!("ERROR: UNKNOWN INSTRUCTION"),
+        }
+    }
+
     fn push_stack(&mut self, addr: u16) {
         self.stack.push(addr);
     }
@@ -81,9 +91,18 @@ impl Chip8 {
     }
 }
 
+fn split_nibbles(word: u16) -> [u8; 4] {
+    [
+        ((word >> 12) & 0xF) as u8,
+        ((word >> 8) & 0xF) as u8,
+        ((word >> 4) & 0xF) as u8,
+        (word & 0xF) as u8,
+    ]
+}
+
 fn main() {
     let mut chip8 = Chip8::new();
-    
+
     let mut buffer = Vec::new();
     let lines = stdin()
         .read_to_end(&mut buffer)

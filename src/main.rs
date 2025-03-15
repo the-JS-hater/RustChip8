@@ -31,6 +31,14 @@ impl Chip8 {
         }
     }
 
+    fn fetch(&mut self) -> u16 {
+        let byte1 = self.mem[self.pc as usize];
+        let byte2 = self.mem[(self.pc + 1) as usize];
+        self.pc += 2;
+
+        return (byte1 as u16) << 8 & (byte2 as u16);
+    }
+
     fn push_stack(&mut self, addr: u16) {
         self.stack.push(addr);
     }

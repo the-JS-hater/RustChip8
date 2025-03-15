@@ -20,7 +20,7 @@ impl Chip8 {
     fn new() -> Self {
         Chip8 {
             mem: [0; 4096],
-            pc: 0x200, 
+            pc: 0x200,
             reg_i: 0,
             stack: Vec::new(),
             registers: [0; 16],
@@ -28,6 +28,17 @@ impl Chip8 {
             delay_timer: 0,
             sound_timer: 0,
         }
+    }
+
+    fn push_stack(&mut self, addr: u16) {
+        self.stack.push(addr);
+    }
+
+    fn pop_stack(&mut self) -> u16 {
+        return self
+            .stack
+            .pop()
+            .expect("Program tried to pop an empty stack");
     }
 }
 

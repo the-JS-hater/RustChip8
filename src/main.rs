@@ -1,5 +1,6 @@
 use raylib::ffi::TraceLogLevel::LOG_NONE;
 use raylib::prelude::*;
+use std::io::{Read, stdin};
 
 const SCREEN_WIDTH: i32 = 64;
 const SCREEN_HEIGHT: i32 = 32;
@@ -41,6 +42,15 @@ impl Chip8 {
             .expect("Program tried to pop an empty stack");
     }
 
+    fn increment_timers(&mut self) {
+        self.delay_timer += 1;
+        self.sound_timer += 1;
+    }
+
+    fn load_rom(&mut self, rom_data: &[u8]) {
+        self.mem[0x200..0x200 + rom_data.len()].copy_from_slice(rom_data);
+    }
+
     fn draw_display(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         let mut d = rl.begin_drawing(thread);
         d.clear_background(Color::BLACK);
@@ -65,6 +75,13 @@ impl Chip8 {
 
 fn main() {
     let mut chip8 = Chip8::new();
+    
+    let mut buffer = Vec::new();
+    let lines = stdin()
+        .read_to_end(&mut buffer)
+        .expect("Failed to read ROM file");
+
+    chip8.load_rom(&buffer);
 
     set_trace_log(LOG_NONE);
 

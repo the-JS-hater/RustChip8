@@ -36,16 +36,65 @@ impl Chip8 {
         let byte2 = self.mem[(self.pc + 1) as usize];
         self.pc += 2;
 
-        return (byte1 as u16) << 8 & (byte2 as u16);
+        return (byte1 as u16) << 8 | (byte2 as u16);
     }
 
     fn execute(&mut self, instruction: u16) {
         let instruction = split_nibbles(instruction);
 
-        todo!();
-        
         match instruction {
-            _ => println!("ERROR: UNKNOWN INSTRUCTION"),
+            [0x0, 0x0, 0xE, 0x0] => self.clear_screen(),
+            [0x1, nibb1, nibb2, nibb3] => {
+                let mut addr = (nibb1 as u16) << 8;
+                addr |= (nibb2 as u16) << 4;
+                addr |= nibb3 as u16;
+                self.pc = addr;
+            }
+            [0x6, x, nibb1, nibb2] => {
+                let idx = x as usize;
+                let val = ((nibb1 as u8) << 4) | nibb2 as u8;
+                self.registers[idx] = val;
+            }
+            [0x7, x, nibb1, nibb2] => {
+                let idx = x as usize;
+                let val = ((nibb1 as u8) << 4) | nibb2 as u8;
+                self.registers[idx] += val;
+            }
+            [0xA, nibb1, nibb2, nibb3] => {
+                let mut addr = (nibb1 as u16) << 8;
+                addr |= (nibb2 as u16) << 4;
+                addr |= nibb3 as u16;
+                self.reg_i = addr;
+            }
+            [0xD, x, y, n] => {
+                let x_idx = x as usize;
+                let y_idx = y as usize;
+                let x_pos = self.registers[x_idx] as usize % 64;
+                let y_pos = self.registers[y_idx] as usize % 32;
+                self.registers[0xF] = 0;
+
+                for i in 0..n {
+                    let addr = self.reg_i as usize + i as usize;
+                    let sprite_data = self.mem[addr];
+
+                    for j in 0..8 {
+                        let pixel = (sprite_data >> (7 - j)) & 1 != 0;
+                        let screen_x = (x_pos + j) % 64;
+                        let screen_y = (y_pos + i as usize) % 32;
+
+                        if pixel {
+                            if self.display[screen_y][screen_x] {
+                                self.registers[0xF] = 1;
+                            }
+                            self.display[screen_y][screen_x] ^= true;
+                        }
+                    }
+                }
+            }
+            _ => {
+                println!("ERROR: UNKNOWN INSTRUCTION {instruction:#?}");
+                panic!();
+            }
         }
     }
 
@@ -60,13 +109,21 @@ impl Chip8 {
             .expect("Program tried to pop an empty stack");
     }
 
-    fn increment_timers(&mut self) {
-        self.delay_timer += 1;
-        self.sound_timer += 1;
+    fn decrement_timers(&mut self) {
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+        }
     }
 
     fn load_rom(&mut self, rom_data: &[u8]) {
         self.mem[0x200..0x200 + rom_data.len()].copy_from_slice(rom_data);
+    }
+
+    fn clear_screen(&mut self) {
+        self.display = [[false; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize];
     }
 
     fn draw_display(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
@@ -118,6 +175,8 @@ fn main() {
         .build();
 
     while !rl.window_should_close() {
+        let instruction = chip8.fetch();
+        chip8.execute(instruction);
         chip8.draw_display(&mut rl, &thread);
     }
 }

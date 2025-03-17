@@ -44,26 +44,88 @@ impl Chip8 {
 
         match instruction {
             [0x0, 0x0, 0xE, 0x0] => self.clear_screen(),
+            [0x0, 0x0, 0xE, 0xE] => {
+                self.pc = self.stack.pop().expect("Tried to pop at empty stack!");
+            }
             [0x1, nibb1, nibb2, nibb3] => {
-                let mut addr = (nibb1 as u16) << 8;
-                addr |= (nibb2 as u16) << 4;
-                addr |= nibb3 as u16;
+                let addr = conc_nibbles(&[nibb1, nibb2, nibb3]);
                 self.pc = addr;
+            }
+            [0x2, nibb1, nibb2, nibb3] => {
+                self.stack.push(self.pc);
+                let addr = conc_nibbles(&[nibb1, nibb2, nibb3]);
+                self.pc = addr;
+            }
+            [0x3, x, nibb1, nibb2] => {
+                let val = nibb1 << 4 | nibb2;
+                if self.registers[x as usize] == val {
+                    self.pc += 2
+                };
+            }
+            [0x4, x, nibb1, nibb2] => {
+                let val = nibb1 << 4 | nibb2;
+                if self.registers[x as usize] != val {
+                    self.pc += 2
+                };
+            }
+            [0x5, x, y, 0x0] => {
+                if self.registers[x as usize] == self.registers[y as usize] {
+                    self.pc += 2;
+                }
             }
             [0x6, x, nibb1, nibb2] => {
                 let idx = x as usize;
-                let val = ((nibb1 as u8) << 4) | nibb2 as u8;
+                let val = nibb1 << 4 | nibb2;
                 self.registers[idx] = val;
             }
             [0x7, x, nibb1, nibb2] => {
                 let idx = x as usize;
-                let val = ((nibb1 as u8) << 4) | nibb2 as u8;
+                let val = nibb1 << 4 | nibb2;
                 self.registers[idx] += val;
             }
+            [0x8, x, y, 0x0] => {
+                self.registers[x as usize] = self.registers[y as usize];
+            }
+            [0x8, x, y, 0x1] => {
+                self.registers[x as usize] |= self.registers[y as usize];
+            }
+            [0x8, x, y, 0x2] => {
+                self.registers[x as usize] &= self.registers[y as usize];
+            }
+            [0x8, x, y, 0x3] => {
+                self.registers[x as usize] ^= self.registers[y as usize];
+            }
+            [0x8, x, y, 0x4] => {
+                let x_val = self.registers[x as usize] as u16;
+                let y_val = self.registers[y as usize] as u16;
+                let sum = x_val + y_val;
+                if sum > 255 {
+                    self.registers[0xF] = 1
+                };
+                self.registers[x as usize] += self.registers[y as usize];
+            }
+            [0x8, x, y, 0x5] => {
+                self.registers[x as usize] -= self.registers[y as usize];
+            }
+            [0x8, x, y, 0x6] => {
+                //NOTE: ambigious!
+                todo!();
+            }
+            [0x8, x, y, 0x7] => {
+                let res = self.registers[x as usize] - self.registers[y as usize];
+                self.registers[x as usize] = res;
+            }
+            [0x8, x, y, 0xE] => {
+                //NOTE: ambigious!
+                todo!();
+            }
+            [0x9, x, y, 0x0] => {
+                if self.registers[x as usize] != self.registers[y as usize] {
+                    self.pc += 2;
+                }
+            }
             [0xA, nibb1, nibb2, nibb3] => {
-                let mut addr = (nibb1 as u16) << 8;
-                addr |= (nibb2 as u16) << 4;
-                addr |= nibb3 as u16;
+                let addr = conc_nibbles(&[nibb1, nibb2, nibb3]);
                 self.reg_i = addr;
             }
             [0xD, x, y, n] => {
@@ -155,6 +217,16 @@ fn split_nibbles(word: u16) -> [u8; 4] {
         ((word >> 4) & 0xF) as u8,
         (word & 0xF) as u8,
     ]
+}
+
+fn conc_nibbles(nibbs: &[u8]) -> u16 {
+    let mut addr: u16 = 0;
+    for nibb in nibbs {
+        addr <<= 4;
+        addr |= (*nibb as u16);
+    }
+
+    return addr;
 }
 
 fn main() {

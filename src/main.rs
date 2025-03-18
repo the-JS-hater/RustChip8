@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use raylib::ffi::TraceLogLevel::LOG_NONE;
 use raylib::prelude::*;
 use std::io::{Read, stdin};
@@ -128,6 +131,14 @@ impl Chip8 {
                 let addr = conc_nibbles(&[nibb1, nibb2, nibb3]);
                 self.reg_i = addr;
             }
+            [0xB, nibb1, nibb2, nibb3] => {
+                //NOTE: ambigious!
+                todo!()
+            }
+            [0xC, x, nibb1, nibb2] => {
+                //NOTE: ambigious!
+                todo!();
+            }
             [0xD, x, y, n] => {
                 let x_idx = x as usize;
                 let y_idx = y as usize;
@@ -152,6 +163,59 @@ impl Chip8 {
                         }
                     }
                 }
+            }
+            [0xE, x, 0x9, 0xE] => {
+                todo!();
+                //Skip if key_pressed() == VX
+            }
+            [0xE, x, 0xA, 0x1] => {
+                todo!();
+                //Skip if key_pressed() != VX
+            }
+            [0xF, x, 0x0, 0x7] => {
+                self.registers[x as usize] = self.delay_timer;
+            }
+            [0xF, x, 0x1, 0x5] => {
+                self.delay_timer = self.registers[x as usize];
+            }
+            [0xF, x, 0x1, 0x8] => {
+                self.sound_timer = self.registers[x as usize];
+            }
+            [0xF, x, 0x1, 0xE] => {
+                //TODO: make overflow, VF = 1, configurable
+                //Overflow would be above 0x1000 (normal addr space)
+                self.reg_i += self.registers[x as usize] as u16;
+            }
+            [0xF, x, 0x0, 0xA] => {
+                loop {
+                    // if key_pressed() -> store value of keypress in VX, then break
+                    todo!();
+                }
+            }
+            [0xF, x, 0x2, 0x9] => {
+                // need to figure out fonts first
+                todo!();
+
+                // The index register I is set to the address of the hexadecimal character in VX. You
+                // probably stored that font somewhere in the first 512 bytes of memory, so now you
+                // just need to point I to the right character.
+            }
+            [0xF, x, 0x3, 0x3] => {
+                let val = self.registers[x as usize];
+                let digit1 = val / 100_u8;
+                let digit2 = (val % 100 - val % 10) / 10_u8;
+                let digit3 = val % 10;
+                self.mem[self.reg_i as usize] = digit1;
+                self.mem[self.reg_i as usize + 1] = digit2;
+                self.mem[self.reg_i as usize + 2] = digit3;
+            }
+            [0xF, x, 0x5, 0x5] => {
+                //NOTE: ambigious instruction
+                todo!()
+            }
+            [0xF, x, 0x6, 0x5] => {
+                //NOTE: ambigious instruction
+                todo!()
             }
             _ => {
                 println!("ERROR: UNKNOWN INSTRUCTION {instruction:#?}");
@@ -223,7 +287,7 @@ fn conc_nibbles(nibbs: &[u8]) -> u16 {
     let mut addr: u16 = 0;
     for nibb in nibbs {
         addr <<= 4;
-        addr |= (*nibb as u16);
+        addr |= *nibb as u16;
     }
 
     return addr;
